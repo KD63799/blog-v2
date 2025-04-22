@@ -9,6 +9,7 @@ import * as speakeasy from "speakeasy";
 import {ConfigService} from "@nestjs/config";
 import {ResetPasswordDemandDto} from "./dto/resetPasswordDemandDto";
 import {ResetPasswordConfirmationDto} from "./dto/ResetPasswordConfirmationDto";
+import {DeleteAccountDto} from "./dto/DeleteAccountDto";
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,7 @@ export class AuthService {
         if (!match) throw new UnauthorizedException("Password Incorrect")
 
         const payload = {
-            sub: user.userID,
+            sub: user.userId,
             email: user.email
         }
         const token = this.jwtService.sign(payload,
@@ -52,7 +53,7 @@ export class AuthService {
             });
         return {
             token,
-            user : {
+            user: {
                 username: user.username,
                 email: user.email,
             },
@@ -61,7 +62,7 @@ export class AuthService {
 
     async resetPasswordDemand(resetPasswordDemandDto: ResetPasswordDemandDto) {
         const {email} = resetPasswordDemandDto;
-        const user = await this.prismaService.user.findUnique({ where: { email } })
+        const user = await this.prismaService.user.findUnique({where: {email}})
         if (!user) throw new NotFoundException("User Not Found");
 
         const secret = this.configService.getOrThrow<string>('OTP_CODE');
@@ -79,28 +80,35 @@ export class AuthService {
 
     }
 
-    async resetPasswordConfirmation(dto: ResetPasswordConfirmationDto) {
-        const { email, code, password } = dto;
-        const user = await this.prismaService.user.findUnique({ where: { email } });
+    async resetPasswordConfirmation(resetPasswordConfirmationDto: ResetPasswordConfirmationDto) {
+        const {email, code, password} = resetPasswordConfirmationDto;
+        const user = await this.prismaService.user.findUnique({where: {email}})
         if (!user) throw new NotFoundException("User Not Found");
-
         const secret = this.configService.getOrThrow<string>('OTP_CODE');
-
         const match = speakeasy.totp.verify({
             secret,
-            encoding: 'base32',
             token: code,
-            window: 1,
+            digits: 6,
+            step: 60 * 15,
+            encoding: 'base32',
         });
-        console.log('🔑 OTP secret:', secret);
-        if (!match) throw new UnauthorizedException("Invalid/expired Token");
-
-        const hash = await bcrypt.hash(password, 10);
-        await this.prismaService.user.update({
-            where: { email },
-            data: { password: hash },
-        });
-        return { data: "Password successfully updated" };
+        if (!match) throw new UnauthorizedException("Invalid/expired Token")
+        const hash = await bcrypt.hash(password, 10)
+        await this.prismaService.user.update({where: {email}, data: {password: hash}})
+        return {data: "Password successfully updated"}
     }
 
+
+    async deleteAccount(userId: number, deleteAccountDto: DeleteAccountDto) {
+        const {password} = deleteAccountDto;
+        const user = await this.prismaService.user.findUnique({where: {userId}})
+        if (!user) throw new NotFoundException("User Not Found");
+
+        const match = await bcrypt.compare(password, user.password)
+        if (!match) throw new UnauthorizedException("Password Incorrect")
+
+        await this.prismaService.user.delete({where: {userId}})
+        return {data: "Account successfully deleted"}
+
+    }
 }
