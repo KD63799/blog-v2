@@ -10,16 +10,19 @@ export class PostService {
 
 
     @Get()
-    async getAll() {
-        return this.prismaService.post.findMany(
-            {
+    async getAll(page: number, limit: number) {
+        const skip = (page - 1) * limit;
+
+        const [data, total] = await this.prismaService.$transaction([
+            this.prismaService.post.findMany({
+                skip,
+                take: limit,
                 include: {
                     user: {
                         select: {
                             username: true,
                             email: true,
-                            password: false
-                        }
+                        },
                     },
                     comments: {
                         include: {
@@ -27,14 +30,24 @@ export class PostService {
                                 select: {
                                     username: true,
                                     email: true,
-                                    password: false
-                                }
-                            }
-                        }
+                                },
+                            },
+                        },
                     },
-                }
-            }
-        );
+                },
+            }),
+            this.prismaService.post.count(),
+        ]);
+
+        return {
+            meta: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
+            data,
+        };
     }
 
     async create(createPostDto: CreatePostDto, userId: any) {

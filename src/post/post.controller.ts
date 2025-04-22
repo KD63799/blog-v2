@@ -1,4 +1,17 @@
-import {Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Req, UseGuards} from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    DefaultValuePipe,
+    Delete,
+    Get,
+    Param,
+    ParseIntPipe,
+    Post,
+    Put,
+    Query,
+    Req,
+    UseGuards
+} from '@nestjs/common';
 import {PostService} from "./post.service";
 import {AuthGuard} from "@nestjs/passport";
 import {CreatePostDto} from "./dto/createPost.dto";
@@ -12,8 +25,11 @@ export class PostController {
     constructor(private readonly postService: PostService) {}
 
     @Get()
-    getAll() {
-        return this.postService.getAll()
+    async getAll(
+        @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+        @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
+    ) {
+        return this.postService.getAll(page, limit);
     }
 
     @ApiBearerAuth()
