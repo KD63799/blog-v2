@@ -1,47 +1,74 @@
-import {Body, Controller, Delete, Param, ParseIntPipe, Post, Put, Req, UseGuards} from '@nestjs/common';
-import {CommentService} from "./comment.service";
-import {Request} from "express";
-import {CreateCommentDto} from "./dto/createComment.dto";
-import {AuthGuard} from "@nestjs/passport";
-import {UpdateCommentDto} from "./dto/updateComment.dto";
-import {ApiBearerAuth, ApiTags} from "@nestjs/swagger";
+import {
+  Body,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { CommentService } from './comment.service';
+import { Request } from 'express';
+import { Create_commentDto } from './dto/create_comment.dto';
+import { Update_commentDto } from './dto/update_comment.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
-@ApiBearerAuth()
-@ApiTags("Comments")
+@ApiTags('Comments')
 @Controller('comments')
 export class CommentController {
-    constructor(private readonly commentService: CommentService) {
-    }
+  constructor(private readonly commentService: CommentService) {}
 
-    @UseGuards(AuthGuard("jwt"))
-    @Post("create")
-    create(@Req() request: Request, @Body() createCommentDto: CreateCommentDto) {
-        // @ts-ignore
-        const userId = request.user["userId"];
-        return this.commentService.create(userId, createCommentDto)
-    }
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new comment' })
+  @UseGuards(AuthGuard('jwt'))
+  @Post('create')
+  create(@Req() request: Request, @Body() createCommentDto: Create_commentDto) {
+    const userId = (request.user as any).userId;
+    return this.commentService.create(userId, createCommentDto);
+  }
 
-    @UseGuards(AuthGuard("jwt"))
-    @Delete("delete/:id")
-    delete(
-        @Req() request: Request,
-        @Param("id", ParseIntPipe) commentId: number,
-        @Body("postId") postId: number) {
-        // @ts-ignore
-        const userId = request.user["userId"];
-        return this.commentService.delete(commentId, userId, postId)
-    }
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a comment' })
+  @ApiParam({ name: 'commentId', description: 'ID of the comment to delete', type: Number })
+  @UseGuards(AuthGuard('jwt'))
+  @Delete('delete/:commentId')
+  delete(
+    @Req() request: Request,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Body('postId', ParseIntPipe) postId: number,
+  ) {
+    const userId = (request.user as any).userId;
+    return this.commentService.delete(commentId, userId, postId);
+  }
 
-    @UseGuards(AuthGuard("jwt"))
-    @Put("update/:id")
-    update(
-        @Param("id", ParseIntPipe) commentId: number,
-        @Body() updateCommentDto: UpdateCommentDto,
-        @Req() request: Request
-    ) {
-        // @ts-ignore
-        const userId = request.user["userId"];
-        return this.commentService.update(commentId, userId, updateCommentDto)
-    }
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update a comment' })
+  @ApiParam({ name: 'commentId', description: 'ID of the comment to update', type: Number })
+  @UseGuards(AuthGuard('jwt'))
+  @Put('update/:commentId')
+  update(
+    @Req() request: Request,
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Body() updateCommentDto: Update_commentDto,
+  ) {
+    const userId = (request.user as any).userId;
+    return this.commentService.update(commentId, userId, updateCommentDto);
+  }
 
+  @ApiOperation({ summary: 'Get all comments for a given post' })
+  @ApiParam({ name: 'postId', description: 'ID of the post whose comments to retrieve', type: Number })
+  @Get('post/:postId')
+  getByPost(
+    @Param('postId', ParseIntPipe) postId: number,
+    @Query('page', new DefaultValuePipe('1'), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe('20'), ParseIntPipe) limit: number,
+  ) {
+    return this.commentService.findByPost(postId, { page, limit });
+  }
 }
