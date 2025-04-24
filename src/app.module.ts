@@ -7,6 +7,8 @@ import { PostModule } from './post/post.module';
 import { CommentModule } from './comment/comment.module';
 import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
 import { PrismaClientExceptionFilter } from 'nestjs-prisma';
+import { UsersModule } from './users/users.module';
+import { LikesModule } from './likes/likes.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { PrismaClientExceptionFilter } from 'nestjs-prisma';
     MailerModule,
     PostModule,
     CommentModule,
+    UsersModule,
+    LikesModule,
   ],
   providers: [
     {
