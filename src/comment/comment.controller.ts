@@ -14,8 +14,8 @@ import {
 } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { Request } from 'express';
-import { Create_commentDto } from './dto/create_comment.dto';
-import { Update_commentDto } from './dto/update_comment.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
@@ -28,7 +28,7 @@ export class CommentController {
   @ApiOperation({ summary: 'Create a new comment' })
   @UseGuards(AuthGuard('jwt'))
   @Post('create')
-  create(@Req() request: Request, @Body() createCommentDto: Create_commentDto) {
+  create(@Req() request: Request, @Body() createCommentDto: CreateCommentDto) {
     const userId = (request.user as any).userId;
     return this.commentService.create(userId, createCommentDto);
   }
@@ -55,7 +55,7 @@ export class CommentController {
   update(
     @Req() request: Request,
     @Param('commentId', ParseIntPipe) commentId: number,
-    @Body() updateCommentDto: Update_commentDto,
+    @Body() updateCommentDto: UpdateCommentDto,
   ) {
     const userId = (request.user as any).userId;
     return this.commentService.update(commentId, userId, updateCommentDto);
@@ -69,6 +69,6 @@ export class CommentController {
     @Query('page', new DefaultValuePipe('1'), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe('20'), ParseIntPipe) limit: number,
   ) {
-    return this.commentService.findByPost(postId, { page, limit });
+    return this.commentService.findByPost(postId, page, limit);
   }
 }

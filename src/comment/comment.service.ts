@@ -1,75 +1,54 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Create_commentDto } from './dto/create_comment.dto';
-import { PrismaService } from '../prisma/prisma.service';
-import { Update_commentDto } from './dto/update_comment.dto';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CommentRepository } from './comment.repository';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 
 @Injectable()
 export class CommentService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly repo: CommentRepository) {}
 
-  async create(userId: number, createCommentDto: Create_commentDto) {
-    const { postId, content } = createCommentDto;
-    const post = await this.prismaService.post.findUniqueOrThrow({ where: { postId } });
-    if (!post) throw new NotFoundException('Post not found');
-    await this.prismaService.comment.create({
-      data: {
-        content,
-        userId,
-        postId,
-      },
-    });
+  async create(userId: number, dto: CreateCommentDto) {
+    const { postId, content } = dto;
+    await this.repo.findPostByIdOrThrow(postId);
+    await this.repo.create(userId, postId, content);
     return { data: 'Comment successfully created' };
   }
 
   async delete(commentId: number, userId: number, postId: number) {
-    const comment = await this.prismaService.comment.findFirstOrThrow({ where: { commentId } });
-    if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.postId != postId) throw new UnauthorizedException('Post id does not match');
-    if (comment.userId != userId) throw new ForbiddenException('Forbidden Action');
-    await this.prismaService.comment.delete({ where: { commentId } });
+    const comment = await this.repo.findByIdOrThrow(commentId);
+    if (comment.postId !== postId) throw new UnauthorizedException('Post id does not match');
+    if (comment.userId !== userId) throw new ForbiddenException('Forbidden Action');
+    await this.repo.remove(commentId);
     return { data: 'Comment deleted' };
   }
 
-  async update(commentId: number, userId: number, updateCommentDto: Update_commentDto) {
-    const { postId, content } = updateCommentDto;
-    const comment = await this.prismaService.comment.findFirstOrThrow({ where: { commentId } });
-    if (!comment) throw new NotFoundException('Comment not found');
-    if (comment.postId != postId) throw new UnauthorizedException('Post id does not match');
-    if (comment.userId != userId) throw new ForbiddenException('Forbidden Action');
-    await this.prismaService.comment.update({ where: { commentId }, data: { content } });
+  async update(commentId: number, userId: number, dto: UpdateCommentDto) {
+    const { postId, content } = dto;
+    const comment = await this.repo.findByIdOrThrow(commentId);
+    if (comment.postId !== postId) throw new UnauthorizedException('Post id does not match');
+    if (comment.userId !== userId) throw new ForbiddenException('Forbidden Action');
+    await this.repo.update(commentId, content);
     return { data: 'Comment Updated' };
   }
 
-  async findByPost(postId: number, { page, limit }: { page: number; limit: number }) {
-    const skip = (page - 1) * limit;
-
-    await this.prismaService.post.findUniqueOrThrow({
-      where: { postId },
-    });
-
-    const [data, total] = await this.prismaService.$transaction([
-      this.prismaService.comment.findMany({
-        where: { postId },
-        skip,
-        take: limit,
-        orderBy: { commentId: 'asc' },
-        include: {
-          user: {
-            select: { username: true, email: true },
-          },
-        },
-      }),
-      this.prismaService.comment.count({ where: { postId } }),
-    ]);
-
+  async findByPost(
+    postId: number,
+    page: number,
+    limit: number,
+  ): Promise<{
+    data: { commentId: number; content: string; user: { username: string; email: string } }[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    await this.repo.findPostByIdOrThrow(postId);
+    const { data, total } = await this.repo.findByPost(postId, page, limit);
     return {
+      data,
       meta: {
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
       },
-      data,
     };
   }
 }

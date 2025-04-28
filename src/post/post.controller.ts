@@ -10,14 +10,17 @@ import {
   Put,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { PostService } from './post.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
-import { Create_postDto } from './dto/create_post.dto';
-import { Update_postDto } from './dto/update_post.dto';
 import { Request } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { PostService } from './post.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 @ApiBearerAuth()
 @ApiTags('Posts')
@@ -27,43 +30,40 @@ export class PostController {
 
   @ApiOperation({ summary: 'Get paginated list of posts' })
   @Get()
-  async getAll(
+  getAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
   ) {
     return this.postService.getAll(page, limit);
   }
 
-  @ApiOperation({ summary: 'Create a new post' })
-  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create a new post (avec image)' })
   @UseGuards(AuthGuard('jwt'))
+  @UseInterceptors(FileInterceptor('image'))
   @Post('create')
-  create(@Body() createPostDto: Create_postDto, @Req() request: Request) {
-    const userId = (request.user as any).userId;
-    return this.postService.create(createPostDto, userId);
+  create(@Req() req: Request, @UploadedFile() file: Express.Multer.File, @Body() createDto: CreatePostDto) {
+    const userId = (req.user as any).userId;
+    return this.postService.create(createDto, userId, file);
   }
 
   @ApiOperation({ summary: 'Delete a post' })
-  @ApiParam({ name: 'postId', description: 'ID of the post to delete', type: Number })
-  @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @Delete('delete/:postId')
-  delete(@Req() request: Request, @Param('postId', ParseIntPipe) postId: number) {
-    const userId = (request.user as any).userId;
+  delete(@Req() req: Request, @Param('postId', ParseIntPipe) postId: number) {
+    const userId = (req.user as any).userId;
     return this.postService.delete(postId, userId);
   }
 
   @ApiOperation({ summary: 'Update a post' })
-  @ApiParam({ name: 'postId', description: 'ID of the post to update', type: Number })
-  @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   @Put('update/:postId')
-  update(
-    @Req() request: Request,
-    @Param('postId', ParseIntPipe) postId: number,
-    @Body() updatePostDto: Update_postDto,
-  ) {
-    const userId = (request.user as any).userId;
-    return this.postService.update(postId, userId, updatePostDto);
+  update(@Req() req: Request, @Param('postId', ParseIntPipe) postId: number, @Body() dto: UpdatePostDto) {
+    const userId = (req.user as any).userId;
+    return this.postService.update(postId, userId, dto);
+  }
+
+  @Get('images/:fileName')
+  getImageUrl(@Param('fileName') fileName: string) {
+    return this.postService.getImageUrl(fileName);
   }
 }

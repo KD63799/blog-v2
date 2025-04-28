@@ -26,13 +26,22 @@ model User {
 }
 
 model Post {
-  postId   Int        @id @default(autoincrement())
-  title    String     @db.VarChar(255)
+  postId   Int         @id @default(autoincrement())
+  title    String      @db.VarChar(255)
   body     String
   userId   Int
-  user     User       @relation("user_posts", fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
-  comments Comment[]  @relation("post_comments")
+  user     User        @relation("user_posts", fields: [userId], references: [userId], onUpdate: Cascade, onDelete: Cascade)
+  comments Comment[]   @relation("post_comments")
   likes    PostLike[]
+  images   PostImage[]
+}
+
+model PostImage {
+  id        Int      @id @default(autoincrement())
+  fileName  String
+  postId    Int
+  post      Post     @relation(fields: [postId], references: [postId], onUpdate: Cascade, onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
 
 model Comment {

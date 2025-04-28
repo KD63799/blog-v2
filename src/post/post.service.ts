@@ -1,41 +1,28 @@
-import { ForbiddenException, Get, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Create_postDto } from './dto/create_post.dto';
-import { Update_postDto } from './dto/update_post.dto';
+import { Injectable } from '@nestjs/common';
+import { PostRepository } from './post.repository';
+import { MinioService } from '../minio/minio.service';
+import { CreatePostDto } from './dto/create-post.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly repo: PostRepository,
+    private readonly minio: MinioService,
+  ) {}
 
-  @Get()
   async getAll(page: number, limit: number) {
-    const skip = (page - 1) * limit;
+    const { data, total } = await this.repo.findAll(page, limit);
 
-    const [data, total] = await this.prismaService.$transaction([
-      this.prismaService.post.findMany({
-        skip,
-        take: limit,
-        include: {
-          user: {
-            select: {
-              username: true,
-              email: true,
-            },
-          },
-          comments: {
-            include: {
-              user: {
-                select: {
-                  username: true,
-                  email: true,
-                },
-              },
-            },
-          },
-        },
+    const dataWithUrls = await Promise.all(
+      data.map(async (post) => {
+        const images = await Promise.all(post.images.map((img) => this.minio.getFileUrl(img.fileName)));
+        return {
+          ...post,
+          images,
+        };
       }),
-      this.prismaService.post.count(),
-    ]);
+    );
 
     return {
       meta: {
@@ -44,29 +31,35 @@ export class PostService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-      data,
+      data: dataWithUrls,
     };
   }
 
-  async create(createPostDto: Create_postDto, userId: any) {
-    const { body, title } = createPostDto;
-    await this.prismaService.post.create({ data: { body, title, userId } });
-    return { data: 'Post successfully created' };
+  async create(createDto: CreatePostDto, userId: number, file?: Express.Multer.File) {
+    let fileName: string | undefined;
+    if (file) {
+      await this.minio.createBucketIfNotExists();
+      fileName = await this.minio.uploadFile(file);
+    }
+    const post = await this.repo.create(createDto, userId, fileName);
+    return { data: post };
   }
 
-  async delete(postId: number, userId: any) {
-    const post = await this.prismaService.post.findUniqueOrThrow({ where: { postId } });
-    if (!post) throw new NotFoundException('Post not found');
-    if (post.userId != userId) throw new ForbiddenException('Forbidden Action');
-    await this.prismaService.post.delete({ where: { postId } });
+  async delete(postId: number, userId: number) {
+    const post = await this.repo.findByIdOrThrow(postId);
+    this.repo.assertOwner(post.userId, userId);
+    await this.repo.delete(postId);
     return { data: 'Post deleted' };
   }
 
-  async update(postId: number, userId: any, updatePostDto: Update_postDto) {
-    const post = await this.prismaService.post.findUniqueOrThrow({ where: { postId } });
-    if (!post) throw new NotFoundException('Post not found');
-    if (post.userId != userId) throw new ForbiddenException('Forbidden Action');
-    await this.prismaService.post.update({ where: { postId }, data: { ...updatePostDto } });
-    return { data: 'Post updated' };
+  async update(postId: number, userId: number, updateDto: UpdatePostDto) {
+    const post = await this.repo.findByIdOrThrow(postId);
+    this.repo.assertOwner(post.userId, userId);
+    const updated = await this.repo.update(postId, updateDto);
+    return { data: updated };
+  }
+
+  async getImageUrl(fileName: string) {
+    return this.minio.getFileUrl(fileName);
   }
 }

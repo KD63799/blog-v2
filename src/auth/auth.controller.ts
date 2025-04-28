@@ -3,11 +3,13 @@ import { AuthService } from './auth.service';
 import { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Sign_upDto } from './dto/sign_up.dto';
-import { Sign_inDto } from './dto/sign_in.dto';
-import { Reset_password_demandDto } from './dto/reset_password_demand.dto';
-import { Reset_password_confirmationDto } from './dto/reset_password_confirmation.dto';
-import { Delete_accountDto } from './dto/delete_account.dto';
+import { SignUpDto } from './dto/sign-up.dto';
+import { SignInDto } from './dto/sign-in.dto';
+import { ResetPasswordDemandDto } from './dto/reset-password-demand.dto';
+import { ResetPasswordConfirmationDto } from './dto/reset-password-confirmation.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
+import { ConnectedUser } from '../users/utils/decorators/connecter-user.decorator';
+import { User } from '@prisma/client';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -15,40 +17,41 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiBody({ type: Sign_upDto })
+  @ApiBody({ type: SignUpDto })
   @Post('signup')
-  signup(@Body() signupDto: Sign_upDto) {
+  signup(@Body() signupDto: SignUpDto) {
     return this.authService.signup(signupDto);
   }
 
   @ApiOperation({ summary: 'Authenticate a user' })
-  @ApiBody({ type: Sign_inDto })
+  @ApiBody({ type: SignInDto })
   @Post('signin')
-  signin(@Body() signinDto: Sign_inDto) {
+  signin(@Body() signinDto: SignInDto) {
     return this.authService.signin(signinDto);
   }
 
   @ApiOperation({ summary: 'Request password reset' })
-  @ApiBody({ type: Reset_password_demandDto })
+  @ApiBody({ type: ResetPasswordDemandDto })
   @Post('reset-password')
-  resetPasswordDemand(@Body() resetPasswordDemandDto: Reset_password_demandDto) {
+  resetPasswordDemand(@Body() resetPasswordDemandDto: ResetPasswordDemandDto) {
     return this.authService.resetPasswordDemand(resetPasswordDemandDto);
   }
 
   @ApiOperation({ summary: 'Confirm password reset' })
-  @ApiBody({ type: Reset_password_confirmationDto })
+  @ApiBody({ type: ResetPasswordConfirmationDto })
   @Post('reset-password-confirmation')
-  resetPasswordConfirmation(@Body() resetPasswordConfirmationDto: Reset_password_confirmationDto) {
+  resetPasswordConfirmation(@Body() resetPasswordConfirmationDto: ResetPasswordConfirmationDto) {
     return this.authService.resetPasswordConfirmation(resetPasswordConfirmationDto);
   }
 
   @ApiOperation({ summary: 'Delete user account' })
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  @ApiBody({ type: Delete_accountDto })
+  @ApiBody({ type: DeleteAccountDto })
   @Delete('delete')
-  deleteAccount(@Req() request: Request, @Body() deleteAccountDto: Delete_accountDto) {
+  deleteAccount(@ConnectedUser() user: User, @Req() request: Request, @Body() deleteAccountDto: DeleteAccountDto) {
     const userID = (request.user as any).userID;
+    console.log(user);
     return this.authService.deleteAccount(userID, deleteAccountDto);
   }
 }

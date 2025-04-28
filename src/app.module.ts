@@ -9,6 +9,8 @@ import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
 import { PrismaClientExceptionFilter } from 'nestjs-prisma';
 import { UsersModule } from './users/users.module';
 import { LikesModule } from './likes/likes.module';
+import { MinioService } from './minio/minio.service';
+import { MinioModule } from './minio/minio.module';
 
 @Module({
   imports: [
@@ -20,13 +22,13 @@ import { LikesModule } from './likes/likes.module';
     CommentModule,
     UsersModule,
     LikesModule,
+    MinioModule,
   ],
   providers: [
     {
       provide: APP_FILTER,
       useFactory: ({ httpAdapter }: HttpAdapterHost) => {
         return new PrismaClientExceptionFilter(httpAdapter, {
-          // Prisma Error Code: HTTP Status Response
           P2000: HttpStatus.BAD_REQUEST,
           P2002: HttpStatus.CONFLICT,
           P2025: HttpStatus.NOT_FOUND,
@@ -34,6 +36,7 @@ import { LikesModule } from './likes/likes.module';
       },
       inject: [HttpAdapterHost],
     },
+    MinioService,
   ],
 })
 export class AppModule {}

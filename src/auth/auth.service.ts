@@ -1,15 +1,15 @@
 import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { Sign_upDto } from './dto/sign_up.dto';
+import { SignUpDto } from './dto/sign-up.dto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from '../mailer/mailer.service';
-import { Sign_inDto } from './dto/sign_in.dto';
+import { SignInDto } from './dto/sign-in.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as speakeasy from 'speakeasy';
 import { ConfigService } from '@nestjs/config';
-import { Reset_password_demandDto } from './dto/reset_password_demand.dto';
-import { Reset_password_confirmationDto } from './dto/reset_password_confirmation.dto';
-import { Delete_accountDto } from './dto/delete_account.dto';
+import { ResetPasswordDemandDto } from './dto/reset-password-demand.dto';
+import { ResetPasswordConfirmationDto } from './dto/reset-password-confirmation.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +20,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async signup(signupDto: Sign_upDto) {
+  async signup(signupDto: SignUpDto) {
     const { username, email, password } = signupDto;
     const user = await this.prismaService.user.findUnique({ where: { email } });
     if (user) throw new ConflictException('User already exists');
@@ -34,7 +34,7 @@ export class AuthService {
     return { data: 'User successfully created' };
   }
 
-  async signin(signinDto: Sign_inDto) {
+  async signin(signinDto: SignInDto) {
     const { email, password } = signinDto;
     const user = await this.prismaService.user.findUniqueOrThrow({ where: { email } });
     if (!user) throw new NotFoundException('User Not Found');
@@ -59,7 +59,7 @@ export class AuthService {
     };
   }
 
-  async resetPasswordDemand(resetPasswordDemandDto: Reset_password_demandDto) {
+  async resetPasswordDemand(resetPasswordDemandDto: ResetPasswordDemandDto) {
     const { email } = resetPasswordDemandDto;
     const user = await this.prismaService.user.findUniqueOrThrow({ where: { email } });
     if (!user) throw new NotFoundException('User Not Found');
@@ -78,7 +78,7 @@ export class AuthService {
     return { data: 'Reset password mail has been sent' };
   }
 
-  async resetPasswordConfirmation(resetPasswordConfirmationDto: Reset_password_confirmationDto) {
+  async resetPasswordConfirmation(resetPasswordConfirmationDto: ResetPasswordConfirmationDto) {
     const { email, code, password } = resetPasswordConfirmationDto;
     const user = await this.prismaService.user.findUniqueOrThrow({ where: { email } });
     if (!user) throw new NotFoundException('User Not Found');
@@ -96,9 +96,9 @@ export class AuthService {
     return { data: 'Password successfully updated' };
   }
 
-  async deleteAccount(userId: number, deleteAccountDto: Delete_accountDto) {
+  async deleteAccount(userId: number, deleteAccountDto: DeleteAccountDto) {
     const { password } = deleteAccountDto;
-    const user = await this.prismaService.user.findUniqueOrThrow({ where: { userId } });
+    const user = await this.prismaService.user.findUnique({ where: { userId } });
     if (!user) throw new NotFoundException('User Not Found');
 
     const match = await bcrypt.compare(password, user.password);

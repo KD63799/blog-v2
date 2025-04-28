@@ -1,10 +1,8 @@
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
-export class Sign_inDto {
+export class ResetPasswordDemandDto {
   @IsNotEmpty()
   @IsEmail()
-  readonly email: string;
-  @IsNotEmpty()
   @IsString()
-  readonly password: string;
+  readonly email: string;
 }

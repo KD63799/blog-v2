@@ -15,14 +15,18 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, documentFactory);
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   await app.listen(process.env.PORT ?? 3000);
 
-  //exception-filter
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(
     new PrismaClientExceptionFilter(httpAdapter, {
-      // Prisma Error Code: HTTP Status Response
       P2000: HttpStatus.BAD_REQUEST,
       P2002: HttpStatus.CONFLICT,
       P2025: HttpStatus.NOT_FOUND,

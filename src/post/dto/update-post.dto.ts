@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 import { Optional } from 'class-validator-extended';
 
-export class Update_postDto {
+export class UpdatePostDto {
   @IsNotEmpty()
   @IsString()
   @Optional()
