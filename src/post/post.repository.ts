@@ -43,7 +43,7 @@ export class PostRepository {
   }
 
   async findByIdOrThrow(postId: number) {
-    const post = await this.prisma.post.findUnique({
+    const post = await this.prisma.post.findUniqueOrThrow({
       where: { postId },
       include: { images: true },
     });

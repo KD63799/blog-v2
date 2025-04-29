@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User } from '@prisma/client';
-import { UpdateUserDto } from './utils/dto/update-user.dto';
 
 @Injectable()
 export class UsersRepository {
@@ -15,7 +14,7 @@ export class UsersRepository {
     return user;
   }
 
-  async updateById(userId: number, data: Partial<UpdateUserDto>): Promise<User> {
+  async updateById(userId: number, data: Partial<User>): Promise<User> {
     return this.prisma.user.update({
       where: { userId },
       data,
